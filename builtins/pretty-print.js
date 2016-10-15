@@ -1,4 +1,7 @@
+(function (global) {
 "use strict";
+
+global.p = prettyPrint;
 
 var width = 80;
 
@@ -192,9 +195,11 @@ function prettyPrint() {
   print(Array.prototype.map.call(arguments, dump).join(" "));
 }
 
-({
+return {
   prettyPrint: prettyPrint,
   dump: dump,
   color: color,
   colorize: colorize
-})
+};
+
+}(this));

@@ -1,6 +1,8 @@
 // setImmediate for seaduk
 // by Tim Caswell
 setImmediate = (function () {
+  "use strict";
+
   var uv = nucleus.uv;
   var checker = new uv.Check();
   var idler = new uv.Idle();

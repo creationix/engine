@@ -1,7 +1,7 @@
-(function () {
 "use strict";
 
 var exports = guess;
+exports.isUTF8 = isUTF8;
 exports.defaultBinary = "application/octet-stream";
 exports.defaultText = "text/plain";
 
@@ -190,7 +190,26 @@ var types = exports.types = {
   zip: "application/zip"
 };
 
-function guess(path, isText) {
+// If the first 1 bit of the byte is 0,that character is 1 byte width and this is the byte.
+// If the first 2 bit of the byte is 10,that byte is not the first byte of a character
+// If the first 3 bit is 110,that character is 2 byte width and this is the first byte
+// If the first 4 bit is 1110,that character is 3 byte width and this is the first byte
+// If the first 5 bit is 11110,that character is 4 byte width and this is the first byte
+// If the first 6 bit is 111110,that character is 5 byte width and this is the first byte
+function isUTF8(bin) {
+  var i = 0, l = bin.length;
+  while (i < l) {
+    if (bin[i] < 0x80) i++;
+    else if (bin[i] < 0xc0) return false;
+    else if (bin[i] < 0xe0) i += 2;
+    else if (bin[i] < 0xf0) i += 3;
+    else if (bin[i] < 0xf8) i += 4;
+    else if (bin[i] < 0xfc) i += 5;
+  }
+  return i === l;
+}
+
+function guess(path, data) {
   path = path.toLowerCase().trim();
   var index = path.lastIndexOf("/");
   if (index >= 0) {
@@ -200,9 +219,10 @@ function guess(path, isText) {
   if (index >= 0) {
     path = path.substr(index + 1);
   }
-  return types[path] || ((isText && isText()) ? exports.defaultText : exports.defaultBinary);
+  return types[path] || (
+    ((typeof data === "string") || data && isUTF8(data))
+      ? exports.defaultText : exports.defaultBinary
+  );
 }
 
 return exports;
-
-}());

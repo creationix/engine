@@ -1,5 +1,6 @@
 /**@license MIT-promiscuous-©Ruben Verborgh*/
 Promise = (function (func, obj) {
+  "use strict";
 
   // Type checking utility function
   function is(type, item) { return (typeof item)[0] == type; }
