@@ -1,4 +1,5 @@
 "use strict";
+
 var bintools = require('bintools');
 var indexOf = bintools.indexOf;
 var binToRaw = bintools.binToRaw;
@@ -159,7 +160,6 @@ function decoder() {
       // But protect against evil clients by refusing heads over 8K long.
       throw new Error("entity too large");
     }
-    p("CHUNK", chunk)
     var tail = slice(chunk, index + 4);
 
     // Parse the status/request line

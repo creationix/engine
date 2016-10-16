@@ -1,38 +1,73 @@
 // Bootstrap require system and inject builtin globals
 nucleus.dofile("builtins/index.js");
 
-var bintools = require('bintools');
-var rawToBin = bintools.rawToBin;
+var Server = require('web').Server;
 
-// Load a library for speaking the HTTP protocol.
-var httpCodec = require('http-codec');
-var encode = httpCodec.encoder();
-var decode = httpCodec.decoder();
+var server = new Server();
 
-// Setup some test datas
-var chunks = [
-  {
-    code: 200,
-    headers: {
-      "Server": "Nucleus",
-      "X-Nucleus-Engine": nucleus.engine + " (" +
-        nucleus.versions[nucleus.engine] +
-      ")",
-      "Transfer-Encoding": "chunked",
-    }
-  },
-  "Hello World\n",
-  ""
-];
+server.use(require('web-log'));
+server.use(require('web-auto-headers'));
 
-for (var i = 0, l = chunks.length; i < l; i++) {
-  var chunk = encode(chunks[i]);
-  p(chunk);
-  chunk = rawToBin(chunk);
-  p(chunk);
-  p(decode(chunk));
-}
+server.route({
+  path: "/:name",
+}, function (req, res) {
+  res.code = 200;
+  res.headers.set("Content-Type", "text/plain");
+  res.body = "Hello " + req.params.name;
+});
 
+server.start();
+
+require('uv').run();
+
+
+// var bintools = require('bintools');
+// var rawToBin = bintools.rawToBin;
+// var web = require('web');
+//
+// // Load a library for speaking the HTTP protocol.
+// var httpCodec = require('http-codec');
+// var encode = httpCodec.encoder();
+// var decode = httpCodec.decoder();
+//
+// // Setup some test datas
+// var chunks = [
+//   {
+//     code: 200,
+//     headers: {
+//       "Server": "Nucleus",
+//       "X-Nucleus-Engine": nucleus.engine + " (" +
+//         nucleus.versions[nucleus.engine] +
+//       ")",
+//       "Transfer-Encoding": "chunked",
+//     }
+//   },
+//   "Hello World\n",
+//   ""
+// ];
+//
+// for (var i = 0, l = chunks.length; i < l; i++) {
+//   var chunk = encode(chunks[i]);
+//   p(chunk);
+//   chunk = rawToBin(chunk);
+//   p(chunk);
+//   p(decode(chunk));
+// }
+//
+// var req = {
+//   method: "HEAD",
+//   path: "/foo?name=Tim&age=34",
+//   headers: [
+//     ["Host", "localhost:8080"],
+//     ["User-Agent", "Test client"]
+//   ]
+// };
+//
+// web.autoHeaders(req, function (req) {
+//   p("REQ", req);
+//   return {};
+// });
+//
 
 // var input = Duktape.Buffer("GET / HTTP/1.1\r\nHost: test.io\r\n\r\n");
 // p(input)

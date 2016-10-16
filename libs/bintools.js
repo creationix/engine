@@ -5,6 +5,7 @@ return {
   binToRaw: binToRaw,
   rawToBin: rawToBin,
   slice: slice,
+  flatten: flatten,
 };
 
 // indexOf for arrays/buffers.  Raw is a string in raw encoding.
@@ -60,4 +61,59 @@ function slice(bin, start, end) {
   }
   p("copy", binToRaw(copy))
   return copy;
+}
+
+// This takes nested lists of numbers, strings and array buffers and returns
+// a single buffer.  Numbers represent single bytes, strings are raw 8-bit
+// strings, and buffers represent themselves.
+// EX:
+//    1           -> <01>
+//    "Hi"        -> <48 69>
+//    [1, "Hi"]   -> <01 48 69>
+//    [[1],2,[3]] -> <01 02 03>
+function flatten(parts) {
+  if (typeof parts === "number") return new Uint8Array([parts])
+  if (parts instanceof Uint8Array) return parts
+  var buffer = new Uint8Array(count(parts))
+  copy(buffer, 0, parts)
+  return buffer
+}
+
+function count(value) {
+  if (value == null) return 0;
+  if (typeof value === "number") return 1;
+  if (typeof value === "string") return value.length;
+  if (value instanceof Uint8Array) return value.length;
+  if (!Array.isArray(value)) {
+    throw new TypeError("Bad type for flatten: " + typeof value);
+  }
+  var sum = 0;
+  for (var i = 0, l = value.length; i < l; i++) {
+    var piece = value[i];
+    sum += count(piece);
+  }
+  return sum;
+}
+
+function copy(buffer, offset, value) {
+  if (value == null) return offset;
+  if (typeof value === "number") {
+    buffer[offset++] = value;
+    return offset;
+  }
+  var i, l;
+  if (typeof value === "string") {
+    for (i = 0, l = value.length; i < l; i++) {
+      buffer[offset++] = value.charCodeAt(i);
+    }
+    return offset;
+  }
+  if (value instanceof ArrayBuffer) {
+    value = new Uint8Array(value);
+  }
+  for (i = 0, l = value.length; i < l; i++) {
+    var piece = value[i];
+    offset = copy(buffer, offset, piece);
+  }
+  return offset;
 }
