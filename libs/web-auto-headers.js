@@ -48,8 +48,7 @@ return function autoHeaders(req, res, next) {
         headers.set("Content-Length", "" + body.length);
       }
       if (!headers.has("ETag")) {
-        var hash = sha1(body);
-        p("HASH", hash);
+        var hash = hexEncode(sha1(body));
         headers.set("ETag", '"' + hash + '"');
       }
       if (!headers.has("Content-Type")) {

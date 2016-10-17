@@ -13,7 +13,7 @@ server.route({
 }, function (req, res) {
   res.code = 200;
   res.headers.set("Content-Type", "text/plain");
-  res.body = "Hello " + req.params.name;
+  res.body = "Hello " + req.params.name + "\n";
 });
 
 server.start();

@@ -37,7 +37,7 @@ function makeRead(socket, decode) {
 
     // Make sure the data is flowing since we need it.
     if (paused) {
-      print("read-start");
+      // print("read-start");
       paused = false;
       socket.readStart(onRead);
     }
@@ -53,8 +53,8 @@ function makeRead(socket, decode) {
 
   function onRead(err, chunk) {
     if (err) return emit(err);
+    // p("<*", chunk);
     if (!decode) return emit(null, chunk);
-    p("<*", err, chunk);
     try {
       buffer = concat(buffer, chunk);
       var out;
@@ -66,11 +66,11 @@ function makeRead(socket, decode) {
     catch (err) {
       return emit(err);
     }
-    print("Done parsing");
+    // print("Done parsing");
   }
 
   function emit(err, value) {
-    p("<-", err, value);
+    // p("<-", err || value);
     // If there is a pending writer, give it the data right away.
     if (reader > writer) {
       var promise = queue[writer++];
@@ -81,7 +81,7 @@ function makeRead(socket, decode) {
     // Pause the read stream if we're buffering data already.
     if (!paused && writer > reader) {
       paused = true;
-      print("read-stop");
+      // print("read-stop");
       socket.readStop();
     }
 
@@ -100,15 +100,13 @@ function makeWrite(socket, encode) {
   }
 
   function write(value) {
-    p("->", value);
+    // p("->", value);
     return new Promise(function (resolve, reject) {
       if (encode) {
-        value = encode(value);
-        p("*>", value);
+        value = flatten(encode(value));
       }
+      // p("*>", value);
       if (value) {
-        value = flatten(value);
-        p("VALUE", value);
         socket.write(value, check);
       }
       else socket.shutdown(check);
