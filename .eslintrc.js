@@ -4,6 +4,7 @@ module.exports = {
         "commonjs": true
     },
     "globals": {
+      "DataView": false,
       "ArrayBuffer": false,
       "Uint8Array": false,
       "Uint32Array": false,
