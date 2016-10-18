@@ -19,7 +19,7 @@ function pktLineDecode(chunk) {
   if (clen < length) return;
   if (length === 0) {
     return [
-      true,
+      null,
       (clen > 4) ? slice(chunk, 4) : ""
     ];
   }
@@ -31,7 +31,7 @@ function pktLineDecode(chunk) {
 
 function pktLineEncode(message) {
   if (message === undefined) return;
-  if (message === true) return "0000";
+  if (message === null) return "0000";
   if (typeof message === "string") {
     message = strToBin(message);
   }
