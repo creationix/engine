@@ -18,17 +18,20 @@ function pktLineDecode(chunk) {
   var length = parseHex(chunk, 0, 4);
   if (clen < length) return;
   if (length === 0) {
-    return [null]
+    return [
+      true,
+      (clen > 4) ? slice(chunk, 4) : ""
+    ];
   }
   return [
     binToStr(chunk, 4, length),
-    clen > length ? slice(chunk, length) : ""
+    (clen > length) ? slice(chunk, length) : ""
   ];
 }
 
 function pktLineEncode(message) {
   if (message === undefined) return;
-  if (message === null) return "0000";
+  if (message === true) return "0000";
   if (typeof message === "string") {
     message = strToBin(message);
   }
