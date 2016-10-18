@@ -63,6 +63,7 @@ return function autoHeaders(req, res, next) {
     }
 
     if (isHead) {
+      req.method = "HEAD";
       res.body = null;
     }
   }

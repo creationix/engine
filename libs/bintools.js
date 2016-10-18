@@ -4,8 +4,13 @@ return {
   indexOf: indexOf,
   binToRaw: binToRaw,
   rawToBin: rawToBin,
+  binToStr: binToStr,
+  strToBin: strToBin,
+  strToRaw: strToRaw,
+  rawToStr: rawToStr,
   slice: slice,
   flatten: flatten,
+  parseDec: parseDec,
 };
 
 // indexOf for arrays/buffers.  Raw is a string in raw encoding.
@@ -51,6 +56,24 @@ function rawToBin(raw, start, end) {
   return bin
 }
 
+function strToBin(str) {
+  return rawToBin(strToRaw(str))
+}
+
+function binToStr(bin, start, end) {
+  return rawToStr(binToRaw(bin, start, end))
+}
+
+function strToRaw(str) {
+  return unescape(encodeURIComponent(str))
+}
+
+function rawToStr(raw) {
+  return decodeURIComponent(escape(raw))
+}
+
+
+
 function slice(bin, start, end) {
   if (start == null) start = 0;
   if (end == null) end = bin.length;
@@ -59,7 +82,6 @@ function slice(bin, start, end) {
   for (var i = start; i < end; i++) {
     copy[i - start] = bin[i];
   }
-  p("copy", binToRaw(copy))
   return copy;
 }
 
@@ -116,4 +138,16 @@ function copy(buffer, offset, value) {
     offset = copy(buffer, offset, piece);
   }
   return offset;
+}
+
+function parseDec(bin, start, end) {
+  var val = 0, sign = 1;
+  if (bin[start] === 0x2d) {
+    start++;
+    sign = -1;
+  }
+  while (start < end) {
+    val = val * 10 + bin[start++] - 0x30;
+  }
+  return sign * val;
 }

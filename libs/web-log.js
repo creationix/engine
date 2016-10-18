@@ -1,5 +1,7 @@
 return function (req, res, next) {
   var userAgent = req.headers.get("User-Agent");
+  var method = req.method;
+  var path = req.path;
 
   // Run all inner layers first.
   return next().then(after);
@@ -8,7 +10,7 @@ return function (req, res, next) {
   function after() {
     if (userAgent) {
       // Skip this layer for clients who don't send User-Agent headers.
-      print([req.method, req.path, userAgent, res.code].join(' '));
+      print([method, path, userAgent, res.code].join(' '));
     }
   }
 }

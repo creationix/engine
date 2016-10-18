@@ -1,12 +1,9 @@
 "use strict";
 
-var Tcp = require('uv').Tcp;
+var createServer = require('net').createServer;
 var httpCodec = require('http-codec');
 var decoder = httpCodec.decoder,
     encoder = httpCodec.encoder;
-var genChannel = require('gen-channel');
-var makeRead = genChannel.makeRead,
-    makeWrite = genChannel.makeWrite;
 var flatten = require('bintools').flatten;
 var websocketCodec = require('websocket-codec');
 var encode = websocketCodec.encode,
@@ -149,22 +146,24 @@ Server.prototype.start = function start() {
   print("Starting HTTP server...");
   for (var i = 0, l = this.bindings.length; i < l; i++) {
     var binding = this.bindings[i];
-    var server = new Tcp();
-    server.bind(binding.host, binding.port);
-    server.listen(128, this.onConnection.bind(this, server));
+    var server = createServer({
+      host: binding.host,
+      port: binding.port,
+      encode: encoder(),
+      decode: decoder(),
+    }, this.onConnection.bind(this));
     p(server.getsockname());
   }
   print("Ready.");
 }
 
-Server.prototype.onConnection = function onConnection(server, err) {
+Server.prototype.onConnection = function onConnection(err, client) {
   if (err) throw err;
-  var client = new Tcp();
-  server.accept(client);
-  var read = makeRead(client, decoder());
-  var write = makeWrite(client, encoder());
   var head, body, chunk, req, res;
   var layers = this.layers;
+  var read = client.read;
+  var write = client.write;
+  var socket = client.socket;
 
   // Start processing the first request (we have a stream of requests)
   return read().then(onHead);
@@ -220,7 +219,7 @@ Server.prototype.onConnection = function onConnection(server, err) {
     // If the socket was still open, look for another request.
     if (chunk) return read().then(onHead);
     // Otherwise close out the socket.
-    client.close();
+    socket.close();
   }
 }
 

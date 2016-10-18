@@ -1,9 +1,10 @@
 // Bootstrap require system and inject builtin globals
 nucleus.dofile("builtins/index.js");
 
-var Server = require('web').Server;
-
-var server = new Server();
+var server = new (require('web').Server);
+var connect = require('net').connect;
+var redisCodec = require('redis-codec');
+var binToStr = require('bintools').binToStr;
 
 server.use(require('web-log'));
 server.use(require('web-auto-headers'));
@@ -17,6 +18,22 @@ server.route({
 });
 
 server.start();
+
+connect({
+  port: 6379,
+  encode: redisCodec.encode,
+  decode: redisCodec.decode,
+}).then(function (client) {
+  p(client);
+  return client.write(["get", "name"]).then(function () {
+    return client.read();
+  }).then(function (result) {
+    p("result", binToStr(result));
+  });
+}).catch(function (err) {
+  print(err.stack);
+});
+
 
 require('uv').run();
 
