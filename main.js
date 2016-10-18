@@ -1,36 +1,54 @@
 // Bootstrap require system and inject builtin globals
 nucleus.dofile("builtins/index.js");
 
-var server = new (require('web').Server);
-var binToStr = require('bintools').binToStr;
-var redisConnect = require('redis-client');
-var msgpack = require('msgpack');
+var connect = require('net').connect;
+var pktLine = require('pkt-line');
 
-server.use(require('web-log'));
-server.use(require('web-auto-headers'));
+connect({
+  // host: "192.30.253.112", // github.com
+  host: "127.0.0.1",
+  port: 9418,
+  encode: pktLine.encode,
+  decode: pktLine.decode,
+}).then(function (client) {
+  p(client.socket.getpeername(), client.socket.getsockname());
+  var req = "git-upload-pack /creationix/conquest.git";
+  return client.write(req).then(client.read).then(p);
+}).catch(print);
 
-server.route({
-  path: "/:name",
-}, function (req, res) {
-  res.code = 200;
-  res.headers.set("Content-Type", "text/plain");
-  res.body = "Hello " + req.params.name + "\n";
-});
 
-server.start();
+// var server = new (require('web').Server);
+// var binToStr = require('bintools').binToStr;
+// var redisConnect = require('redis-client');
+// var msgpack = require('msgpack');
+//
+// server.use(require('web-log'));
+// server.use(require('web-auto-headers'));
+//
+// server.route({
+//   path: "/:name",
+// }, function (req, res) {
+//   res.code = 200;
+//   res.headers.set("Content-Type", "text/plain");
+//   res.body = "Hello " + req.params.name + "\n";
+// });
+//
+// server.start();
+//
+// redisConnect().then(function (call) {
+//   return call("get", "name");
+// }).then(function (result) {
+//   p(binToStr(result));
+// }).catch(function (err) {
+//   print(err.stack);
+// });
+//
+// var original = {name:"Tim",age:34,isProgrammer:true}
+// var encoded = msgpack.encode(original);
+// var decoded = msgpack.decode(encoded);
+// p(original, encoded, decoded);
 
-redisConnect().then(function (call) {
-  return call("get", "name");
-}).then(function (result) {
-  p(binToStr(result));
-}).catch(function (err) {
-  print(err.stack);
-});
 
-var original = {name:"Tim",age:34,isProgrammer:true}
-var encoded = msgpack.encode(original);
-var decoded = msgpack.decode(encoded);
-p(original, encoded, decoded);
 
 require('uv').run();
 

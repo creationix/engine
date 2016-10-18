@@ -11,6 +11,7 @@ return {
   slice: slice,
   flatten: flatten,
   parseDec: parseDec,
+  parseHex: parseHex,
 };
 
 // indexOf for arrays/buffers.  Raw is a string in raw encoding.
@@ -150,4 +151,13 @@ function parseDec(bin, start, end) {
     val = val * 10 + bin[start++] - 0x30;
   }
   return sign * val;
+}
+
+function parseHex(bin, start, end) {
+  var val = 0;
+  while (start < end) {
+    var digit = bin[start++];
+    val = (val << 4) | (digit - ((digit < 0x40) ? 0x30 : 0x57));
+  }
+  return val;
 }

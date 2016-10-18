@@ -1,4 +1,5 @@
 var flatten = require('bintools').flatten;
+var binToRaw = require('bintools').binToRaw;
 
 return {
   makeRead: makeRead,
@@ -16,7 +17,7 @@ function makeRead(socket, decode) {
   // buffer to store leftover data between decoder calls.
   var buffer;
 
-  var concat = decode.concat || defaultConcat;
+  var concat = (decode && decode.concat) || defaultConcat;
 
   read.updateDecode = updateDecode;
 
@@ -53,7 +54,7 @@ function makeRead(socket, decode) {
 
   function onRead(err, chunk) {
     if (err) return emit(err);
-    p("<*", chunk);
+    // p("<*", chunk, binToRaw(chunk));
     if (!decode) return emit(null, chunk);
     try {
       buffer = concat(buffer, chunk);
@@ -106,7 +107,7 @@ function makeWrite(socket, encode) {
         value = Duktape.Buffer(flatten(encode(value)));
       }
 
-      p("*>", value);
+      // p("*>", value, binToRaw(value));
       if (value) {
         socket.write(value, check);
       }
