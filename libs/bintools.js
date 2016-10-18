@@ -107,6 +107,7 @@ function count(value) {
   if (typeof value === "number") return 1;
   if (typeof value === "string") return value.length;
   if (value instanceof Uint8Array) return value.length;
+  if (value.constructor === Duktape.Buffer) return value.length;
   if (!Array.isArray(value)) {
     throw new TypeError("Bad type for flatten: " + typeof value);
   }

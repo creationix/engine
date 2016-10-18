@@ -2,11 +2,14 @@
 nucleus.dofile("builtins/index.js");
 
 // Load the git network client to get remotes
+var fetch = require('git').fetch;
 var lsRemote = require('git').lsRemote;
+var flatten = require('bintools').flatten;
+var binToRaw = require('bintools').binToRaw;
 
-lsRemote("127.0.0.1", "/creationix/conquest.git").then(p).catch(print);
+fetch("127.0.0.1", "/creationix/conquest.git").then(p).catch(print);
 lsRemote("127.0.0.1", "/creationix/revision.git").then(p).catch(print);
-lsRemote("127.0.0.1", "/creationix/exploder.git").then(p).catch(print);
+// lsRemote("127.0.0.1", "/creationix/exploder.git").then(p).catch(print);
 
 // Start the event loop.
 require('uv').run();

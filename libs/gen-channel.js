@@ -25,7 +25,7 @@ function makeRead(socket, decode) {
 
   function updateDecode(newDecode) {
     decode = newDecode;
-    concat = decode.concat || defaultConcat;
+    concat = (decode && decode.concat) || defaultConcat;
   }
 
   function read() {
@@ -71,7 +71,7 @@ function makeRead(socket, decode) {
   }
 
   function emit(err, value) {
-    // p("<-", err || value);
+    p("<-", err || value);
     // If there is a pending writer, give it the data right away.
     if (reader > writer) {
       var promise = queue[writer++];
@@ -101,7 +101,7 @@ function makeWrite(socket, encode) {
   }
 
   function write(value) {
-    // p("->", value);
+    p("->", value);
     return new Promise(function (resolve, reject) {
       if (encode) {
         value = Duktape.Buffer(flatten(encode(value)));
