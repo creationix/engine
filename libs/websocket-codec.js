@@ -1,3 +1,5 @@
+"use strict";
+
 return {
   encode: encode,
   decode: decode,

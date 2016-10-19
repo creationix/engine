@@ -1,3 +1,4 @@
+"use strict";
 
 var bintools = require('bintools');
 var flatten = bintools.flatten,

@@ -1,3 +1,5 @@
+"use strict";
+
 var parseQuery = require('web-helpers').parseQuery;
 var flatten = require('bintools').flatten;
 var hexEncode = nucleus.hexEncode;

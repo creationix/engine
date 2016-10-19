@@ -1,5 +1,8 @@
+"use strict";
+
 var connect = require('net').connect;
 var pktLine = require('pkt-line');
+var packCodec = require('pack-codec');
 
 return {
   lsRemote: lsRemote,
@@ -25,7 +28,7 @@ function fetch(host, path, ref) {
   }).then(onLine);
 
   function onLine(line) {
-    if (line ===  true) return write("want " + hash + "\0ofs-delta agent=seaduk-git\n").then(function () {
+    if (line ===  true) return write("want " + hash + "\0agent=seaduk-git\n").then(function () {
       return write(true);
     }).then(function () {
       return write("done");
@@ -36,7 +39,7 @@ function fetch(host, path, ref) {
         throw new Error("Missing expected NAK");
       }
       packParts = [];
-      read.updateDecode();
+      read.updateDecode(packCodec.decoder());
       write.updateEncode();
       return read().then(onPack);
     });
@@ -54,6 +57,7 @@ function fetch(host, path, ref) {
     if (!chunk) return write().then(function () {
       return packParts;
     });
+    // p("$$", chunk)
     packParts.push(chunk);
     return read().then(onPack);
   }

@@ -98,16 +98,16 @@ function dump(value) {
     if (name === "Thread") {
       return colorize("thread", "[Thread " + info[1] + "]");
     }
-    if (name === "Buffer") {
-      var preview = Array.prototype.slice.call(value, 0, 10).map(function (byte) {
+    if (name === "Buffer" || name === "Uint8Array") {
+      var preview = Array.prototype.slice.call(value, 0, 20).map(function (byte) {
         return byte < 16 ? "0" + byte.toString(16) : byte.toString(16);
       }).join(" ");
-      if (value.length > 10) { preview += "..."; }
+      if (value.length > 20) { preview += "..."; }
       // Fixed buffers have undefined for info[4]
       if (info[4] === undefined) {
-        return colorize("buffer", "[Buffer " + preview + "]");
+        return colorize("buffer", "[" + name + " " + preview + "]");
       }
-      return colorize("dbuffer", "[Dynamic Buffer " + preview + "]");
+      return colorize("dbuffer", "[" + name + " " + preview + "]");
     }
     if (name === "Pointer") {
       return colorize("pointer", "[Pointer " + info[1] + "]");

@@ -1,3 +1,5 @@
+"use strict";
+
 var Tcp = require('uv').Tcp;
 var genChannel = require('gen-channel');
 var makeRead = genChannel.makeRead,

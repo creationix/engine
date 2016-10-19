@@ -18,14 +18,11 @@ function pktLineDecode(chunk) {
   var length = parseHex(chunk, 0, 4);
   if (clen < length) return;
   if (length === 0) {
-    return [
-      true,
-      (clen > 4) ? slice(chunk, 4) : ""
-    ];
+    return [ true, slice(chunk, 4) ];
   }
   return [
     binToStr(chunk, 4, length),
-    (clen > length) ? slice(chunk, length) : ""
+    slice(chunk, length)
   ];
 }
 

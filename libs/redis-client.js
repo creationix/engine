@@ -1,3 +1,5 @@
+"use strict";
+
 var connect = require('net').connect;
 var redisCodec = require('redis-codec');
 

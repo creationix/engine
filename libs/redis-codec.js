@@ -1,3 +1,5 @@
+"use strict";
+
 var bintools = require('bintools');
 var strToBin = bintools.strToBin,
     binToStr = bintools.binToStr,

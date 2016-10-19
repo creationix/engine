@@ -1,5 +1,7 @@
+"use strict";
+
 var flatten = require('bintools').flatten;
-var binToRaw = require('bintools').binToRaw;
+// var binToRaw = require('bintools').binToRaw;
 
 return {
   makeRead: makeRead,
@@ -54,13 +56,14 @@ function makeRead(socket, decode) {
 
   function onRead(err, chunk) {
     if (err) return emit(err);
-    // p("<*", chunk, binToRaw(chunk));
+    p("<*", chunk);
     if (!decode) return emit(null, chunk);
     try {
       buffer = concat(buffer, chunk);
       var out;
       while ((out = decode(buffer))) {
         buffer = out[1];
+        p("extra", buffer);
         emit(null, out[0]);
       }
     }
@@ -71,7 +74,7 @@ function makeRead(socket, decode) {
   }
 
   function emit(err, value) {
-    p("<-", err || value);
+    // p("<-", err || value);
     // If there is a pending writer, give it the data right away.
     if (reader > writer) {
       var promise = queue[writer++];
@@ -101,7 +104,7 @@ function makeWrite(socket, encode) {
   }
 
   function write(value) {
-    p("->", value);
+    // p("->", value);
     return new Promise(function (resolve, reject) {
       if (encode) {
         value = Duktape.Buffer(flatten(encode(value)));
