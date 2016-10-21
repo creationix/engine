@@ -41,18 +41,9 @@ function realEncode(value) {
   }
 }
 
-// Uint8Array comes in, [value, extra] comes out.
+// buffer, offset comes in, [value, offset] goes out.
 // Extra is undefined if there was no extra input.
-function decode(chunk) {
-  if (!chunk) return;
-  var out = innerDecode(chunk, 0);
-  if (!out) return;
-  return (out[1] < chunk.length) ?
-    [out[0], slice(chunk, out[1])] :
-    [out[0]];
-}
-
-function innerDecode(chunk, offset) {
+function decode(chunk, offset) {
   if (chunk.length <= offset) return;
   var index, len;
   switch(chunk[offset]) {
@@ -107,7 +98,7 @@ function innerDecode(chunk, offset) {
       var list = [];
       offset = index + 2;
       while (len--) {
-        var out = innerDecode(chunk, offset);
+        var out = decode(chunk, offset);
         if (!out) return;
         list.push(out[0]);
         offset = out[1];

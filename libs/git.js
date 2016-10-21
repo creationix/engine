@@ -40,6 +40,7 @@ function fetch(host, path, ref) {
       }
       packParts = [];
       read.updateDecode(packCodec.decoder());
+      // read.updateDecode();
       write.updateEncode();
       return read().then(onPack);
     });

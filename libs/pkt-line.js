@@ -2,7 +2,6 @@
 
 var bintools = require('bintools');
 var parseHex = bintools.parseHex,
-    slice = bintools.slice,
     binToStr = bintools.binToStr,
     strToBin = bintools.strToBin;
 
@@ -11,18 +10,18 @@ return {
   decode: pktLineDecode,
 };
 
-function pktLineDecode(chunk) {
+function pktLineDecode(chunk, offset) {
   if (!chunk) return;
   var clen = chunk.length;
-  if (clen < 4) return;
-  var length = parseHex(chunk, 0, 4);
+  if (clen < 4 + offset) return;
+  var length = parseHex(chunk, offset, offset + 4);
   if (clen < length) return;
   if (length === 0) {
-    return [ true, slice(chunk, 4) ];
+    return [ true, offset + 4 ];
   }
   return [
-    binToStr(chunk, 4, length),
-    slice(chunk, length)
+    binToStr(chunk, offset + 4, offset + length),
+    offset + length
   ];
 }
 

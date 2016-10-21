@@ -150,23 +150,23 @@ function decoder() {
   var bytesLeft; // For counted decoder
 
   // This state is for decoding the status line and headers.
-  function decodeHead(chunk) {
+  function decodeHead(chunk, offset) {
     if (!chunk) return;
 
-    var index = indexOf(chunk, "\r\n\r\n");
+    var index = indexOf(chunk, "\r\n\r\n", offset);
     // First make sure we have all the head before continuing
     if (index < 0) {
       if (chunk.length < 8 * 1024) return;
       // But protect against evil clients by refusing heads over 8K long.
       throw new Error("entity too large");
     }
-    var tail = slice(chunk, index + 4);
+    var bodyStart = index + 4;
 
     // Parse the status/request line
     var head = {};
 
-    index = indexOf(chunk, "\n") + 1;
-    var line = binToRaw(chunk, 0, index);
+    index = indexOf(chunk, "\n", offset) + 1;
+    var line = binToRaw(chunk, offset, index);
     var match = line.match(/^HTTP\/(\d\.\d) (\d+) ([^\r\n]+)/);
     if (match) {
       head.code = parseInt(match[2]);
@@ -235,25 +235,25 @@ function decoder() {
     else if (!head.keepAlive) {
       mode = decodeRaw;
     }
-    return [head, tail];
+    return [head, bodyStart];
 
   }
 
   // This is used for inserting a single empty string into the output string for known empty bodies
-  function decodeEmpty(chunk) {
+  function decodeEmpty(chunk, offset) {
     mode = decodeHead;
-    return [new Uint8Array(0), chunk];
+    return [new Uint8Array(0), offset];
   }
 
-  function decodeRaw(chunk) {
+  function decodeRaw(chunk, offset) {
     if (!chunk) return [new Uint8Array(0)];
     if (chunk.length === 0) return;
-    return [chunk];
+    return [slice(chunk, offset), offset + chunk.length];
   }
 
-  function decodeChunked(chunk) {
+  function decodeChunked(chunk, offset) {
     // Make sure we have at least the length header
-    var index = indexOf(chunk, '\r\n');
+    var index = indexOf(chunk, '\r\n', offset);
     if (index < 0) return;
 
     // And parse it
@@ -261,7 +261,7 @@ function decoder() {
     var length = parseInt(hex, 16);
 
     // Wait till we have the rest of the body
-    var start = hex.length + 2;
+    var start = offset + hex.length + 2;
     var end = start + length;
     if (chunk.length < end + 2) return;
 
@@ -271,15 +271,14 @@ function decoder() {
     // Make sure the chunk ends in '\r\n'
     assert(binToRaw(chunk, end, end + 2) == '\r\n', 'Invalid chunk tail');
 
-    return [slice(chunk, start, end), slice(chunk, end + 2)];
+    return [slice(chunk, start, end), end + 2];
   }
 
-  function decodeCounted(chunk) {
+  function decodeCounted(chunk, offset) {
     if (bytesLeft === 0) {
-      mode = decodeEmpty;
-      return mode(chunk);
+      return (mode = decodeEmpty)(chunk, offset);
     }
-    var length = chunk.length;
+    var length = chunk.length - offset;
     // Make sure we have at least one byte to process
     if (!length) return;
 
@@ -288,16 +287,16 @@ function decoder() {
     // If the entire chunk fits, pass it all through
     if (length <= bytesLeft) {
       bytesLeft -= length;
-      return [chunk];
+      return [slice(chunk, offset), offset + length];
     }
 
-    return [slice(chunk, 0, bytesLeft), slice(chunk, bytesLeft + 1)];
+    return [slice(chunk, offset, offset + bytesLeft), offset + bytesLeft];
   }
 
   // Switch between states by changing which decoder mode points to
   mode = decodeHead;
-  function decode(chunk) {
-    return mode(chunk);
+  function decode(chunk, offset) {
+    return mode(chunk, offset);
   }
   return decode;
 }

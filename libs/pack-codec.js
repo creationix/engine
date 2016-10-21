@@ -25,68 +25,73 @@ function packDecoder() {
   var state = $header;
   var count;
 
-  return function (chunk) {
-    return state(chunk);
+  return function (chunk, offset) {
+    if (!chunk) return;
+    return state(chunk, offset);
   }
 
   // 4 byte signature "PACK"  <50 41 43 4b>
   // 4 byte version number    <00 00 00 02>
   // 4 byte number of objects <xx xx xx xx>
-  function $header(chunk) {
+  function $header(chunk, offset) {
     // Wait till we have at least 12 bytes
-    if (chunk.length < 12) return;
+    if (chunk.length < offset + 12) return;
     // Verify the first 8 bytes to be as expected
     if (!(
-      chunk[0] == 0x50 && chunk[1] == 0x41 &&
-      chunk[2] == 0x43 && chunk[3] == 0x4b &&
-      chunk[4] == 0x00 && chunk[5] == 0x00 &&
-      chunk[6] == 0x00 && chunk[7] == 0x02)) {
+      chunk[offset + 0] == 0x50 && chunk[offset + 1] == 0x41 &&
+      chunk[offset + 2] == 0x43 && chunk[offset + 3] == 0x4b &&
+      chunk[offset + 4] == 0x00 && chunk[offset + 5] == 0x00 &&
+      chunk[offset + 6] == 0x00 && chunk[offset + 7] == 0x02)) {
         throw new Error("Bad header in packfile");
     }
     // Read the number of objects in the stream.
-    count = ((chunk[8] << 24) |
-          (chunk[9] << 16) |
-          (chunk[10] << 8) |
-          chunk[11]) >>> 0;
+    count = ((chunk[offset + 8] << 24) |
+          (chunk[offset + 9] << 16) |
+          (chunk[offset + 10] << 8) |
+          chunk[offset + 11]) >>> 0;
     state = $objhead;
     return [
       { version: 2,
         count: count },
-      slice(chunk, 12)
+      offset + 12
     ];
   }
 
-  function $objhead(chunk) {
-    if (!chunk || chunk.length < 1) return;
+  function $objhead(chunk, offset) {
+    if (!chunk || chunk.length < offset + 1) return;
     p(count);
-    var typeId = (chunk[0] >> 4) & 0x07;
-    var type = numToType[typeId] || typeId;
-    var length = chunk[0] & 0x0f;
-    var i = 1;
-    if (chunk[0] & 0x80) {
-      var offset = 4;
+    var typeId = (chunk[offset] >> 4) & 0x07;
+    var type = numToType[typeId];
+    if (!type) throw new Error("Invalid type ID: " + typeId);
+    print("Decoding " + type + " at " + offset + "...");
+    var length = chunk[offset] & 0x0f;
+    if (chunk[offset++] & 0x80) {
+      var bits = 4;
       do {
-        if (chunk.length <= i) return;
-        length |= chunk[i] << offset;
-        offset += 7;
-      } while (chunk[i++] & 0x80);
+        if (chunk.length <= offset) return;
+        length |= chunk[offset] << bits;
+        bits += 7;
+      } while (chunk[offset++] & 0x80);
     }
+    print("  length: " + length);
 
     var ref;
     if (type === "ref-delta") {
-      if (chunk.length < i + 20) return;
-      ref = slice(chunk, i, i += 20);
+      if (chunk.length < offset + 20) return;
+      ref = slice(chunk, offset, offset += 20);
     }
     else if (type === "ofs-delta") {
-      var byte = chunk[i++];
-      ref = byte & 0x7f;
-      while (byte & 0x80) {
-        byte = chunk[i++];
-        ref = ((ref + 1) << 7) | (byte & 0x7f);
-      }
+      throw new Error("TODO: Implement ofs-delta");
+      // var byte = chunk[i++];
+      // ref = byte & 0x7f;
+      // while (byte & 0x80) {
+      //   byte = chunk[i++];
+      //   ref = ((ref + 1) << 7) | (byte & 0x7f);
+      // }
     }
-    p(type, length, i, ref, chunk);
-    var out = nucleus.inflate(chunk, i, length);
+    p(type, length, offset, ref, chunk);
+    var out = nucleus.inflate(chunk, offset, length);
+    p("inflate output", out, offset, length);
     if (!out) return;
     count--;
     var obj = {
@@ -94,6 +99,6 @@ function packDecoder() {
       data: out[0],
     };
     if (ref) obj.ref = ref;
-    return [obj, slice(chunk, out[1] + i)];
+    return [obj, out[1] + offset];
   }
 }

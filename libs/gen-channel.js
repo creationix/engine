@@ -1,7 +1,9 @@
 "use strict";
 
-var flatten = require('bintools').flatten;
-// var binToRaw = require('bintools').binToRaw;
+var bintools = require('bintools');
+var flatten = bintools.flatten;
+var slice = bintools.slice;
+// var binToRaw = bintools.binToRaw;
 
 return {
   makeRead: makeRead,
@@ -55,17 +57,26 @@ function makeRead(socket, decode) {
   }
 
   function onRead(err, chunk) {
+    p("<*", err || chunk);
     if (err) return emit(err);
-    p("<*", chunk);
     if (!decode) return emit(null, chunk);
     try {
-      buffer = concat(buffer, chunk);
+      buffer = buffer ? concat(buffer, chunk) : chunk;
+      var offset = 0;
       var out;
-      while ((out = decode(buffer))) {
-        buffer = out[1];
-        p("extra", buffer);
+      while ((
+        p("decode in", offset, buffer.length, buffer),
+        out = decode(buffer, offset),
+        p("decode out", out),
+        out
+      )) {
+        print("Consumed bytes: " + (out[1] - offset));
+        print("Extra bytes: " + (buffer.length - out[1]));
+        offset = out[1];
         emit(null, out[0]);
       }
+      p({buffer:buffer,offset:offset, length:buffer&&buffer.length})
+      buffer = buffer && ((offset < buffer.length) ? slice(buffer, offset) : null);
     }
     catch (err) {
       return emit(err);
@@ -74,7 +85,7 @@ function makeRead(socket, decode) {
   }
 
   function emit(err, value) {
-    // p("<-", err || value);
+    p("<-", err || value);
     // If there is a pending writer, give it the data right away.
     if (reader > writer) {
       var promise = queue[writer++];
@@ -104,7 +115,7 @@ function makeWrite(socket, encode) {
   }
 
   function write(value) {
-    // p("->", value);
+    p("->", value);
     return new Promise(function (resolve, reject) {
       if (encode) {
         value = Duktape.Buffer(flatten(encode(value)));
@@ -124,5 +135,5 @@ function makeWrite(socket, encode) {
 }
 
 function defaultConcat(buffer, chunk) {
-  return (buffer && buffer.length) ? flatten([buffer, chunk]) : chunk;
+  return flatten([buffer, chunk]);
 }

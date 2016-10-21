@@ -2,8 +2,11 @@
 "use strict";
 
 global.p = prettyPrint;
+var Tty = nucleus.uv.Tty;
 
-var width = 80;
+var stdout = new Tty(1, false);
+var size = stdout.getWinsize();
+var width = size[0];
 
 // nice color theme using 256-mode colors
 var theme = {};
@@ -113,7 +116,7 @@ function dump(value) {
       return colorize("pointer", "[Pointer " + info[1] + "]");
     }
     if (name === "Error") {
-      return colorize("error", "[" + value.constructor.name + " " + value.message + "]");
+      return colorize("error", "[" + value.constructor.name + " " + value.stack + "]");
     }
     if (name === "Date") {
       return colorize("date", "[Date " + value + "]");
@@ -189,6 +192,11 @@ function dump(value) {
 
 function strip(string) {
   return string.replace(/\x1b\[[^m]*m/g, '');
+}
+
+global.print = function () {
+  var line = [].join.call(arguments, " ") + "\r\n";
+  stdout.write(line);
 }
 
 function prettyPrint() {
