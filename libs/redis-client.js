@@ -12,7 +12,10 @@ return function (options) {
   }).then(function (client) {
     var read = client.read,
         write = client.write;
-    return function call() {
+    call.write = write;
+    call.read = read;
+    return call;
+    function call() {
       var args = [].slice.call(arguments);
       return write(args).then(read);
     }

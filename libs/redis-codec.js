@@ -44,6 +44,7 @@ function realEncode(value) {
 // buffer, offset comes in, [value, offset] goes out.
 // Extra is undefined if there was no extra input.
 function decode(chunk, offset) {
+  if (!chunk) return;
   if (chunk.length <= offset) return;
   var index, len;
   switch(chunk[offset]) {

@@ -3,17 +3,50 @@
 var connect = require('net').connect;
 var pktLine = require('pkt-line');
 var packCodec = require('pack-codec');
-var binToHex = require('bintools').binToHex;
+var bintools = require('bintools');
+var flatten = bintools.flatten;
+var binToStr = bintools.binToStr;
+var slice = bintools.slice;
+var parseDec = bintools.parseDec;
+var indexOf = bintools.indexOf;
 
 return {
-  lsRemote: lsRemote,
   fetch: fetch,
+  frame: frame,
+  deframe: deframe,
 };
 
-function fetch(host, path, ref, load, save) {
+// obj.type - type as string
+// obj.data - raw encoded data
+// returns: hash - as hex string
+function frame(obj) {
+  return flatten([obj.type + " " + obj.data.length + "\0", obj.data]);
+}
+
+// inverse of frame
+function deframe(framed) {
+  var index = indexOf(framed, " ");
+  var type = binToStr(framed, 0, index);
+  var index2 = indexOf(framed, "\0", index);
+  var length = parseDec(framed, index + 1, index2);
+  var data = slice(framed, index2 + 1);
+  if (data.length !== length) throw new Error("Size Mismatch");
+  return {
+    type: type,
+    data: data
+  };
+
+}
+
+function fetch(options) {
+  var host = options.host || "127.0.0.1";
+  var path = options.path;
+  var ref = options.ref || "HEAD";
+  var load = options.load;
+  var save = options.save;
   var hashes = [];
+  var result = { hashes: hashes };
   var read, write, caps, hash;
-  ref = ref || "HEAD";
 
   return connect({
     host: host,
@@ -29,9 +62,33 @@ function fetch(host, path, ref, load, save) {
   }).then(onLine);
 
   function onLine(line) {
-    if (line === true) return write("want " + hash + "\0agent=seaduk-git\n").then(function () {
-      return write(true);
-    }).then(function () {
+    if (line === true) {
+      if (hash === options.have) {
+        return write().then(function () {
+          return result;
+        });
+      }
+      return write("want " + hash + "\0agent=seaduk-git\n").then(function () {
+        if (options.have) {
+          return write("have " + options.have + "\n").then(sendDone);
+        }
+        return sendDone();
+      });
+    }
+    if (!caps) {
+      var parts = line.split("\0");
+      line = parts[0];
+      caps = parseCaps(parts[1]);
+    }
+    var match = line.match(/^([0-9a-z]{40}) ([^\n]+)/);
+    if (match[2] === ref) {
+      hash = result.root = match[1];
+    }
+    return read().then(onLine);
+  }
+
+  function sendDone() {
+    return write(true).then(function () {
       return write("done");
     }).then(function () {
       return read();
@@ -44,24 +101,19 @@ function fetch(host, path, ref, load, save) {
       write.updateEncode();
       return read().then(onSummary);
     });
-    if (!caps) {
-      var parts = line.split("\0");
-      line = parts[0];
-      caps = parseCaps(parts[1]);
-    }
-    var match = line.match(/^([0-9a-z]{40}) ([^\n]+)/);
-    if (match[2] === ref) hash = match[1];
-    return read().then(onLine);
   }
 
   function onSummary(summary) {
-    p("summary", summary);
+    result.summary = summary;
     return read().then(onObject);
   }
 
   function onObject(obj) {
-    p("obj", obj)
-    if (!obj) return hashes;
+    if (!obj) {
+      return write().then(function () {
+        return result;
+      });
+    }
     if (!obj.ref) return save(obj).then(onSave);
     return load(obj.ref).then(function (base) {
       return save({
@@ -75,38 +127,6 @@ function fetch(host, path, ref, load, save) {
     return read().then(onObject);
   }
 
-}
-
-function lsRemote(host, path) {
-  var read, write, refs;
-
-  return connect({
-    host: host,
-    port: 9418,
-    encode: pktLine.encode,
-    decode: pktLine.decode,
-  }).then(function (client) {
-    read = client.read;
-    write = client.write;
-    return write("git-upload-pack " + path + "\0host=" + host + "\0");
-  }).then(function () {
-    return read();
-  }).then(onLine);
-
-  function onLine(line) {
-    if (line === true) return write(true).then(function () {
-      return refs;
-    });
-    if (!refs) {
-      var parts = line.split("\0");
-      line = parts[0];
-      p(parseCaps(parts[1]))
-      refs = {};
-    }
-    var match = line.match(/^([0-9a-z]{40}) ([^\n]+)/);
-    refs[match[2]] = match[1];
-    return read().then(onLine);
-  }
 }
 
 function parseCaps(line) {

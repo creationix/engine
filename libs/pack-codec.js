@@ -92,8 +92,6 @@ function packDecoder() {
     if (!out) return;
     count--;
     if (count <= 0) {
-      // TODO: verify checksum
-      offset += 20;
       state = $done;
     }
     var obj = {
@@ -104,6 +102,11 @@ function packDecoder() {
     return [obj, out[1] + offset];
   }
 
-  function $done() { return; }
+  function $done(chunk, offset) {
+    // throw new Error("TODO:")
+    // TODO: verify checksum
+    offset += 20;
+    return [undefined, offset];
+  }
 
 }
