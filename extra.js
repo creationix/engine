@@ -203,3 +203,23 @@ require('uv').run();
 // // }
 // //
 // // uv.run();
+
+var binToRaw = require('bintools').binToRaw;
+var indexOf = require('bintools').indexOf;
+var parseDec = require('bintools').parseDec;
+var slice = require('bintools').slice;
+
+function deframe(framed) {
+  var index = indexOf(framed, " ");
+  var type = binToRaw(framed, 0, index);
+  var index2 = indexOf(framed, "\0", index);
+  var length = parseDec(framed, index + 1, index2);
+  var data = slice(framed, index2 + 1);
+  if (data.length !== length) {
+    throw new Error("Length mismatch decoding git object");
+  }
+  return {
+    type: type,
+    data: data
+  };
+}

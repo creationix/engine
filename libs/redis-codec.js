@@ -34,7 +34,7 @@ function realEncode(value) {
     return ['*' + value.length + '\r\n', value.map(realEncode)];
   }
   else {
-    if (!(value instanceof Uint8Array)) {
+    if (typeof value !== 'buffer') {
       value = strToBin('' + value);
     }
     return ['$' + value.length + '\r\n', value, '\r\n'];

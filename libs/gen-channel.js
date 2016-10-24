@@ -57,25 +57,17 @@ function makeRead(socket, decode) {
   }
 
   function onRead(err, chunk) {
-    p("<*", err || chunk);
+    // p("<*", err || chunk);
     if (err) return emit(err);
     if (!decode) return emit(null, chunk);
     try {
       buffer = buffer ? concat(buffer, chunk) : chunk;
       var offset = 0;
       var out;
-      while ((
-        p("decode in", offset, buffer.length, buffer),
-        out = decode(buffer, offset),
-        p("decode out", out),
-        out
-      )) {
-        print("Consumed bytes: " + (out[1] - offset));
-        print("Extra bytes: " + (buffer.length - out[1]));
+      while ((out = decode(buffer, offset))) {
         offset = out[1];
         emit(null, out[0]);
       }
-      p({buffer:buffer,offset:offset, length:buffer&&buffer.length})
       buffer = buffer && ((offset < buffer.length) ? slice(buffer, offset) : null);
     }
     catch (err) {
@@ -85,7 +77,7 @@ function makeRead(socket, decode) {
   }
 
   function emit(err, value) {
-    p("<-", err || value);
+    // p("<-", err || value);
     // If there is a pending writer, give it the data right away.
     if (reader > writer) {
       var promise = queue[writer++];
@@ -115,7 +107,7 @@ function makeWrite(socket, encode) {
   }
 
   function write(value) {
-    p("->", value);
+    // p("->", value);
     return new Promise(function (resolve, reject) {
       if (encode) {
         value = Duktape.Buffer(flatten(encode(value)));

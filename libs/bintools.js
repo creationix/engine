@@ -1,9 +1,13 @@
 "use strict";
 
+var Buffer = Duktape.Buffer;
+
 return {
   indexOf: indexOf,
   binToRaw: binToRaw,
   rawToBin: rawToBin,
+  binToHex: binToHex,
+  hexToBin: hexToBin,
   binToStr: binToStr,
   strToBin: strToBin,
   strToRaw: strToRaw,
@@ -32,8 +36,8 @@ function indexOf(bin, raw, start, end) {
 }
 
 function binToRaw(bin, start, end) {
-  if (!(bin instanceof Uint8Array)) {
-    bin = new Uint8Array(bin);
+  if (!(bin instanceof Buffer)) {
+    bin = Buffer(bin);
   }
   start = start == null ? 0 : start | 0;
   end = end == null ? bin.length : end | 0;
@@ -44,13 +48,13 @@ function binToRaw(bin, start, end) {
   return raw;
 }
 
-// Convert a raw string into a Uint8Array
+// Convert a raw string into a Buffer
 function rawToBin(raw, start, end) {
   raw = '' + raw
   start = start == null ? 0 : start | 0
   end = end == null ? raw.length : end | 0
   var len = end - start
-  var bin = new Uint8Array(len)
+  var bin = Buffer(len)
   for (var i = 0; i < len; i++) {
     bin[i] = raw.charCodeAt(i + start)
   }
@@ -74,12 +78,11 @@ function rawToStr(raw) {
 }
 
 
-
 function slice(bin, start, end) {
   if (start == null) start = 0;
   if (end == null) end = bin.length;
   if (end <= start) return;
-  var copy = new Uint8Array(end - start);
+  var copy = Buffer(end - start);
   for (var i = start; i < end; i++) {
     copy[i - start] = bin[i];
   }
@@ -95,9 +98,9 @@ function slice(bin, start, end) {
 //    [1, "Hi"]   -> <01 48 69>
 //    [[1],2,[3]] -> <01 02 03>
 function flatten(parts) {
-  if (typeof parts === "number") return new Uint8Array([parts])
-  if (parts instanceof Uint8Array) return parts
-  var buffer = new Uint8Array(count(parts))
+  if (typeof parts === "number") return Buffer([parts])
+  if (parts instanceof Buffer) return parts
+  var buffer = Buffer(count(parts))
   copy(buffer, 0, parts)
   return buffer
 }
@@ -106,7 +109,7 @@ function count(value) {
   if (value == null) return 0;
   if (typeof value === "number") return 1;
   if (typeof value === "string") return value.length;
-  if (value instanceof Uint8Array) return value.length;
+  if (value instanceof Buffer) return value.length;
   if (value.constructor === Duktape.Buffer) return value.length;
   if (!Array.isArray(value)) {
     throw new TypeError("Bad type for flatten: " + typeof value);
@@ -133,7 +136,7 @@ function copy(buffer, offset, value) {
     return offset;
   }
   if (value instanceof ArrayBuffer) {
-    value = new Uint8Array(value);
+    value = Buffer(value);
   }
   for (i = 0, l = value.length; i < l; i++) {
     var piece = value[i];
@@ -161,4 +164,29 @@ function parseHex(bin, start, end) {
     val = (val << 4) | (digit - ((digit < 0x40) ? 0x30 : 0x57));
   }
   return val;
+}
+
+function binToHex(bin, start, end) {
+  if (!(bin instanceof Buffer)) bin = Buffer(bin)
+  start = start == null ? 0 : start | 0
+  end = end == null ? bin.length : end | 0
+  var hex = ''
+  for (var i = start; i < end; i++) {
+    var byte = bin[i]
+    hex += (byte < 0x10 ? '0' : '') + byte.toString(16)
+  }
+  return hex
+}
+
+function hexToBin(hex, start, end) {
+  hex = '' + hex
+  start = start == null ? 0 : start | 0
+  end = end == null ? hex.length : end | 0
+  var len = (end - start) >> 1
+  var bin = Buffer(len)
+  var offset = 0
+  for (var i = start; i < end; i += 2) {
+    bin[offset++] = parseInt(hex.substr(i, 2), 16)
+  }
+  return bin
 }

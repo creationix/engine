@@ -1,7 +1,7 @@
 "use strict";
 
 var bintools = require('bintools');
-var slice = bintools.slice;
+var binToHex = bintools.binToHex;
 
 var typeToNum = {
   commit: 1,
@@ -59,11 +59,10 @@ function packDecoder() {
 
   function $objhead(chunk, offset) {
     if (!chunk || chunk.length < offset + 1) return;
-    p(count);
+    // p(count);
     var typeId = (chunk[offset] >> 4) & 0x07;
     var type = numToType[typeId];
     if (!type) throw new Error("Invalid type ID: " + typeId);
-    print("Decoding " + type + " at " + offset + "...");
     var length = chunk[offset] & 0x0f;
     if (chunk[offset++] & 0x80) {
       var bits = 4;
@@ -73,27 +72,30 @@ function packDecoder() {
         bits += 7;
       } while (chunk[offset++] & 0x80);
     }
-    print("  length: " + length);
 
     var ref;
     if (type === "ref-delta") {
       if (chunk.length < offset + 20) return;
-      ref = slice(chunk, offset, offset += 20);
+      ref = binToHex(chunk, offset, offset += 20);
     }
     else if (type === "ofs-delta") {
       throw new Error("TODO: Implement ofs-delta");
-      // var byte = chunk[i++];
+      // var byte = chunk[offset++];
       // ref = byte & 0x7f;
       // while (byte & 0x80) {
-      //   byte = chunk[i++];
+      //   byte = chunk[offset++];
       //   ref = ((ref + 1) << 7) | (byte & 0x7f);
       // }
     }
-    p(type, length, offset, ref, chunk);
-    var out = nucleus.inflate(chunk, offset, length);
-    p("inflate output", out, offset, length);
+    // p(type, length, offset, ref, chunk);
+    var out = nucleus.zinflate(chunk, offset, length);
     if (!out) return;
     count--;
+    if (count <= 0) {
+      // TODO: verify checksum
+      offset += 20;
+      state = $done;
+    }
     var obj = {
       type: type,
       data: out[0],
@@ -101,4 +103,7 @@ function packDecoder() {
     if (ref) obj.ref = ref;
     return [obj, out[1] + offset];
   }
+
+  function $done() { return; }
+
 }
