@@ -10,10 +10,17 @@ var slice = bintools.slice;
 var parseDec = bintools.parseDec;
 var indexOf = bintools.indexOf;
 
+var parseOct = bintools.parseOct;
+var binToHex = bintools.binToHex;
+var binToRaw = bintools.binToRaw;
+
 return {
   fetch: fetch,
   frame: frame,
   deframe: deframe,
+  decodeCommit: decodeCommit,
+  decodeTag: decodeTag,
+  decodeTree: decodeTree,
 };
 
 // obj.type - type as string
@@ -203,4 +210,101 @@ function copy(target, targetOffset, source, sourceOffset, length) {
   for (var i = 0; i < length; i++) {
     target[targetOffset + i] = source[sourceOffset + i];
   }
+}
+
+function decodeTree(body) {
+  var i = 0;
+  var length = body.length;
+  var start;
+  var mode;
+  var name;
+  var hash;
+  var tree = {};
+  while (i < length) {
+    start = i;
+    i = indexOf(body, " ", start);
+    if (i < 0) { throw new SyntaxError("Missing space"); }
+    mode = parseOct(body, start, i++);
+    start = i;
+    i = indexOf(body, "\0", start);
+    name = binToStr(body, start, i++);
+    hash = binToHex(body, i, i += 20);
+    tree[name] = {
+      mode: mode,
+      hash: hash,
+      type: mode === 57344 ? "commit"
+       : mode === 16384 ? "tree"
+       : (mode & 49152) === 32768 ? "blob" : "unknown",
+      exec: mode == 33261,
+      sym: mode == 40960,
+    };
+  }
+  return tree;
+}
+
+function decodeCommit(body) {
+  var i = 0;
+  var start;
+  var key;
+  var parents = [];
+  var commit = {
+    parents: parents,
+  };
+  while (body[i] !== 0x0a) {
+    start = i;
+    i = indexOf(body, " ", start);
+    if (i < 0) { throw new SyntaxError("Missing space"); }
+    key = binToRaw(body, start, i++);
+    start = i;
+    i = indexOf(body, "\n", start);
+    if (i < 0) { throw new SyntaxError("Missing linefeed"); }
+    var value = binToStr(body, start, i++);
+    if (key === "parent") {
+      parents.push(value);
+    }
+    else {
+      if (key === "author" || key === "committer") {
+        value = decodePerson(value);
+      }
+      commit[key] = value;
+    }
+  }
+  i++;
+  commit.message = binToStr(body, i, body.length);
+  return commit;
+}
+
+function decodeTag(body) {
+  var i = 0;
+  var start;
+  var key;
+  var tag = {};
+  while (body[i] !== 0x0a) {
+    start = i;
+    i = indexOf(body, " ", start);
+    if (i < 0) { throw new SyntaxError("Missing space"); }
+    key = binToRaw(body, start, i++);
+    start = i;
+    i = indexOf(body, "\n", start);
+    if (i < 0) { throw new SyntaxError("Missing linefeed"); }
+    var value = binToStr(body, start, i++);
+    if (key === "tagger") { value = decodePerson(value); }
+    tag[key] = value;
+  }
+  i++;
+  tag.message = binToStr(body, i, body.length);
+  return tag;
+}
+
+function decodePerson(string) {
+  var match = string.match(/^([^<]*) <([^>]*)> ([^ ]*) (.*)$/);
+  if (!match) { throw new Error("Improperly formatted person string"); }
+  return {
+    name: match[1],
+    email: match[2],
+    date: {
+      seconds: parseInt(match[3], 10),
+      offset: parseInt(match[4], 10) / 100 * -60
+    }
+  };
 }

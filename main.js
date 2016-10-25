@@ -3,14 +3,17 @@ nucleus.dofile("builtins/index.js");
 
 var Server = require('web').Server;
 var fetch = require('git').fetch;
+var decodeCommit = require('git').decodeCommit;
+var decodeTree = require('git').decodeTree;
 var redisStorage = require('redis-storage');
+var guess = require('mime').guess
 
 // Global config
 // TODO: pull these from command line or environment variables.
 var path = "/creationix/creationix.com.git";
 var ref = "refs/heads/www";
 
-var roots = {};
+var rootHash;
 
 pull().then(serve).catch(p);
 
@@ -41,19 +44,24 @@ function serve() {
   });
 
   server.route({
-    path: "/",
     method: "GET",
-  }, function (req, res) {
-    res.code = 200;
-    res.body = "New blog coming soon...";
-  });
-
-  server.route({
-    path: "/:name",
-  }, function (req, res) {
-    res.code = 200;
-    res.headers.set("Content-Type", "text/plain");
-    res.body = "Hello " + req.params.name + "\n";
+  }, function (req, res, next) {
+    render(req.path).then(function (response) {
+      p("RESPONSE", response)
+      if (!response) return next();
+      var defaultCode = 404;
+      if (response.mime) res.headers.set("Content-Type", response.mime);
+      if (response.redirect) {
+        defaultCode = 302;
+        res.headers.set("Location", response.redirect);
+      }
+      res.code = response.code || defaultCode;
+      if (response.body) res.body = response.body;
+    }).catch(function (err) {
+      res.code = 500;
+      res.headers.set("Content-Type", "text/plain");
+      res.body = err.stack;
+    });
   });
 
   server.start();
@@ -75,7 +83,7 @@ function pull() {
         load: storage.load,
         save: storage.save,
       }).then(function (result) {
-        roots[path] = result.root;
+        rootHash = result.root;
         if (result.root === root) {
           print("No updates");
           return result;
@@ -92,6 +100,60 @@ function pull() {
     });
   });
 }
+
+function render(path) {
+  return redisStorage().then(function (storage) {
+    var load = storage.load;
+    var parts = path.split('/').filter(Boolean);
+    var index = 0, last = parts.length;
+    return load(rootHash).then(onObject);
+
+    function onObject(obj) {
+      if (obj.type === "commit") {
+        var commit = decodeCommit(obj.data);
+        return load(commit.tree).then(onObject);
+      }
+      if (index === last) {
+        return renderObj(obj);
+      }
+      var part = parts[index++];
+      if (obj.type === "tree") {
+        var tree = decodeTree(obj.data);
+        var entry = tree[part];
+        if (!entry) return { body: "No such file: " + path };
+        return load(entry.hash).then(onObject);
+      }
+      if (!entry) return { body: "No such file: " + path };
+    }
+
+    function renderObj(obj) {
+      if (obj.type === "tree") {
+        if (path[path.length - 1] !== "/") {
+          return { redirect: path + "/" };
+        }
+        var tree = decodeTree(obj.data);
+        var index = tree['index.html'];
+        if (index) {
+          path += "index.html";
+          return load(index.hash).then(renderObj);
+        }
+        return {
+          code: 200,
+          mime: "application/json",
+          body: JSON.stringify(tree, null, 2)
+        };
+      }
+      return load(obj.hash).then(function (body) {
+        return {
+          code: 200,
+          mime: guess(path, body),
+          body: body,
+        };
+      });
+    }
+  });
+}
+
 
 // Start the event loop.
 require('uv').run();

@@ -33,6 +33,9 @@ return function autoHeaders(req, res, next) {
     if (!headers.has("Server")) {
       headers.add("Server", "Seaduk-Web");
     }
+    if (!headers.has("X-Powered-By")) {
+      headers.add("X-Powered-By", "Seaduk");
+    }
     if (!headers.has("Date")) {
       headers.add("Date", new Date().toUTCString());
     }

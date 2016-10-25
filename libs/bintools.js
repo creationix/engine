@@ -15,6 +15,7 @@ return {
   slice: slice,
   flatten: flatten,
   parseDec: parseDec,
+  parseOct: parseOct,
   parseHex: parseHex,
 };
 
@@ -155,6 +156,14 @@ function parseDec(bin, start, end) {
     val = val * 10 + bin[start++] - 0x30;
   }
   return sign * val;
+}
+
+function parseOct(bin, start, end) {
+  var val = 0;
+  while (start < end) {
+    val = val * 8 + bin[start++] - 0x30;
+  }
+  return val;
 }
 
 function parseHex(bin, start, end) {
