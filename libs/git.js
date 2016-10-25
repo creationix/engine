@@ -40,6 +40,7 @@ function deframe(framed) {
 
 function fetch(options) {
   var host = options.host || "127.0.0.1";
+  var hostName = options.hostName || host;
   var path = options.path;
   var ref = options.ref || "HEAD";
   var load = options.load;
@@ -56,7 +57,7 @@ function fetch(options) {
   }).then(function (client) {
     read = client.read;
     write = client.write;
-    return write("git-upload-pack " + path + "\0host=" + host + "\0");
+    return write("git-upload-pack " + path + "\0host=" + hostName + "\0");
   }).then(function () {
     return read();
   }).then(onLine);
