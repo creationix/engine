@@ -1,3 +1,4 @@
+"use strict";
 // Bootstrap require system and inject builtin globals
 nucleus.dofile("builtins/index.js");
 
@@ -6,7 +7,7 @@ var fetch = require('git').fetch;
 var decodeCommit = require('git').decodeCommit;
 var decodeTree = require('git').decodeTree;
 var redisStorage = require('redis-storage');
-var guess = require('mime').guess
+var guess = require('mime');
 
 // Global config
 // TODO: pull these from command line or environment variables.
@@ -36,17 +37,11 @@ function serve() {
       res.headers.set("Content-Type", "application/json");
       res.body = JSON.stringify(result, null, 2) + "\n";
       p(res);
-    }).catch(function (err) {
-      res.code = 500;
-      res.headers.set("Content-Type", "text/plain");
-      res.body = err.stack;
     });
   });
 
-  server.route({
-    method: "GET",
-  }, function (req, res, next) {
-    render(req.path).then(function (response) {
+  server.use(function (req, res, next) {
+    return render(req.path).then(function (response) {
       p("RESPONSE", response)
       if (!response) return next();
       var defaultCode = 404;
@@ -57,10 +52,6 @@ function serve() {
       }
       res.code = response.code || defaultCode;
       if (response.body) res.body = response.body;
-    }).catch(function (err) {
-      res.code = 500;
-      res.headers.set("Content-Type", "text/plain");
-      res.body = err.stack;
     });
   });
 
@@ -143,13 +134,12 @@ function render(path) {
           body: JSON.stringify(tree, null, 2)
         };
       }
-      return load(obj.hash).then(function (body) {
-        return {
-          code: 200,
-          mime: guess(path, body),
-          body: body,
-        };
-      });
+      var body = obj.data;
+      return {
+        code: 200,
+        mime: guess(path, body),
+        body: body,
+      };
     }
   });
 }

@@ -1,3 +1,5 @@
+"use strict";
+
 var sha1 = nucleus.sha1;
 var hexEncode = nucleus.hexEncode;
 var bintools = require('bintools');

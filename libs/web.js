@@ -128,7 +128,7 @@ Server.prototype.route = function route(options, layer) {
   var method = options.method;
   var path = options.path && compileRoute(options.path);
   var host = options.host && compileGlob(options.host);
-  return this.use(function (req, res, next) {
+  return this.use(function generatedRoute(req, res, next) {
     if (method && (req.method !== method)) return next();
     if (host && !host(req.headers.get("Host"))) return next();
     var params;
@@ -186,19 +186,19 @@ Server.prototype.onConnection = function onConnection(err, client) {
     req = new Request(head, body);
     res = new Response();
 
-    return runLayer(0).catch(function (err) {
-      print(err.stack);
-      res.code = 500;
-      res.body = err.stack
-    }).then(onResponse);
+    return runLayer(0).then(onResponse);
   }
 
   function runLayer(index) {
     return new Promise(function (resolve) {
       var layer = layers[index];
-      resolve(layer && layer(req, res, function () {
+      return resolve(layer && layer(req, res, function () {
         return runLayer(index + 1);
       }));
+    }).catch(function (err) {
+      p(err);
+      res.code = 500;
+      res.body = err.stack + "\n";
     });
   }
 

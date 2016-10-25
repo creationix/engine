@@ -1,6 +1,6 @@
 "use strict";
 
-return function (req, res, next) {
+return function logger(req, res, next) {
   var userAgent = req.headers.get("User-Agent");
   var method = req.method;
   var path = req.path;

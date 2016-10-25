@@ -4,6 +4,7 @@ var bintools = require('bintools');
 var indexOf = bintools.indexOf;
 var binToRaw = bintools.binToRaw;
 var slice = bintools.slice;
+var Buffer = Duktape.Buffer;
 
 var STATUS_CODES = {
   '100': 'Continue',
@@ -242,7 +243,7 @@ function decoder() {
   // This is used for inserting a single empty string into the output string for known empty bodies
   function decodeEmpty(chunk, offset) {
     mode = decodeHead;
-    return [new Uint8Array(0), offset];
+    return [Buffer(0), offset];
   }
 
   function decodeRaw(chunk, offset) {
