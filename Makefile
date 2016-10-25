@@ -1,4 +1,4 @@
-NUCLEUS=$(shell which nucleus)
+NUCLEUS=$(shell which nucleus-tiny)
 FILES=$(shell find . -type f -name '*.js' | grep -v eslintrc)
 
 server: ${NUCLEUS} bundle.zip

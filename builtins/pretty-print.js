@@ -4,9 +4,10 @@
 global.p = prettyPrint;
 var Tty = nucleus.uv.Tty;
 
-var stdout = new Tty(1, false);
-var size = stdout.getWinsize();
-var width = size[0];
+//var stdout = new Tty(1, false);
+//var size = stdout.getWinsize();
+//var width = size[0];
+var width = 80;
 
 // nice color theme using 256-mode colors
 var theme = {};
@@ -55,6 +56,7 @@ function color(color_name) {
 }
 
 function colorize(color_name, string, reset_name) {
+  return string;
   return color(color_name) + string + color(reset_name);
 }
 
@@ -194,10 +196,10 @@ function strip(string) {
   return string.replace(/\x1b\[[^m]*m/g, '');
 }
 
-global.print = function () {
-  var line = [].join.call(arguments, " ") + "\r\n";
-  stdout.write(line);
-}
+//global.print = function () {
+//  var line = [].join.call(arguments, " ") + "\r\n";
+//  stdout.write(line);
+//}
 
 function prettyPrint() {
   print(Array.prototype.map.call(arguments, dump).join(" "));

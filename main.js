@@ -20,8 +20,12 @@ function serve() {
   server.use(require('web-log'));
   server.use(require('web-auto-headers'));
 
+  server.bind({
+    port: 7006
+  });
+
   server.route({
-    method: "GET",
+    method: "POST",
     path: "/github-hook",
   }, function (req, res) {
     return pull().then(function (result) {
@@ -34,6 +38,14 @@ function serve() {
       res.headers.set("Content-Type", "text/plain");
       res.body = err.stack;
     });
+  });
+
+  server.route({
+    path: "/",
+    method: "GET",
+  }, function (req, res) {
+    res.code = 200;
+    res.body = "New blog coming soon...";
   });
 
   server.route({
