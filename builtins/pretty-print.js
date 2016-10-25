@@ -1,13 +1,39 @@
 (function (global) {
 "use strict";
+var uv = nucleus.uv;
 
 global.p = prettyPrint;
-var Tty = nucleus.uv.Tty;
 
-//var stdout = new Tty(1, false);
-//var size = stdout.getWinsize();
-//var width = size[0];
-var width = 80;
+var colorize, width, strip;
+if (uv.guess_handle(1) === "TTY") {
+  colorize = function colorize(color_name, string, reset_name) {
+    return color(color_name) + string + color(reset_name);
+  };
+  strip = function strip(string) {
+    return string.replace(/\u001b\[[^m]*m/g, '');
+  }
+  var Tty = uv.Tty;
+  var stdout = new Tty(1, false);
+  var size = stdout.getWinsize();
+  width = size[0];
+  global.print = function () {
+   var line = [].join.call(arguments, " ") + "\r\n";
+   stdout.write(line);
+  }
+}
+else {
+  colorize = function (_, string) {
+    return string;
+  };
+  strip = function strip(string) {
+    return string;
+  }
+  width = 80;
+}
+
+function color(color_name) {
+ return "\x1b[" + (color_name ? theme[color_name] : "0") + "m";
+}
 
 // nice color theme using 256-mode colors
 var theme = {};
@@ -50,15 +76,6 @@ obrace = colorize("braces", '{');
 cbrace = colorize("braces", '}');
 comma = colorize("sep", ',');
 colon = colorize("sep", ':');
-
-function color(color_name) {
- return "\x1b[" + (color_name ? theme[color_name] : "0") + "m";
-}
-
-function colorize(color_name, string, reset_name) {
-  return string;
-  return color(color_name) + string + color(reset_name);
-}
 
 function dump(value) {
 
@@ -192,14 +209,7 @@ function dump(value) {
   }
 }
 
-function strip(string) {
-  return string.replace(/\x1b\[[^m]*m/g, '');
-}
 
-//global.print = function () {
-//  var line = [].join.call(arguments, " ") + "\r\n";
-//  stdout.write(line);
-//}
 
 function prettyPrint() {
   print(Array.prototype.map.call(arguments, dump).join(" "));
