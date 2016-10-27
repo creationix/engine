@@ -13,8 +13,16 @@ var dns = {
   "localhost": "127.0.0.1",
 };
 
-initialize("git://github.com/creationix/conquest.git").then(require('server')).catch(p);
-// initialize("app").then(require('server')).catch(p);
+if (nucleus.args[0]) {
+  initialize(nucleus.args[0]).then(require('server')).catch(p);
+}
+else {
+  var cmd = nucleus.cmd;
+  print("Usage:");
+  print("  " + cmd + " git://github.com/creationix/conquest.git # Serve from git repo");
+  print("  " + cmd + " path/to/checkout                         # Serve from filesystem");
+  nucleus.exit(-1);
+}
 
 function initialize(url) {
   print("Initializing " + url + "...");
