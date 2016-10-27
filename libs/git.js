@@ -230,13 +230,11 @@ function decodeTree(body) {
     name = binToStr(body, start, i++);
     hash = binToHex(body, i, i += 20);
     tree[name] = {
-      mode: mode,
-      hash: hash,
       type: mode === 57344 ? "commit"
        : mode === 16384 ? "tree"
        : (mode & 49152) === 32768 ? "blob" : "unknown",
-      exec: mode == 33261,
-      sym: mode == 40960,
+      mode: mode,
+      hash: hash,
     };
   }
   return tree;

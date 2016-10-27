@@ -31,9 +31,13 @@ return function redisStorage() {
         return deframe(framed);
       });
     }
+    function free() {
+      return call.write();
+    }
     return {
       load: load,
       save: save,
+      free: free,
       call: call,
     };
   });

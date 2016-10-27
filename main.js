@@ -4,22 +4,26 @@ nucleus.dofile("builtins/index.js");
 
 var Server = require('web').Server;
 var fetch = require('git').fetch;
-var decodeCommit = require('git').decodeCommit;
-var decodeTree = require('git').decodeTree;
 var redisStorage = require('redis-storage');
 var guess = require('mime');
 
 // Global config
 // TODO: pull these from command line or environment variables.
-var path = "/creationix/creationix.com.git";
-var ref = "refs/heads/www";
+// var path = "/creationix/creationix.com.git";
+// var ref = "refs/heads/www";
+var path = "/creationix/conquest.git";
+var ref = "refs/heads/master";
 
 var rootHash;
 
 pull().then(serve).catch(p);
+// serve();
+
 
 // Serve application over HTTP
 function serve() {
+  // var vfs = require('git-vfs')(rootHash);
+  var vfs = require('fs-vfs')(nucleus.pathjoin(nucleus.base, 'app'));
   var server = new Server();
   server.use(require('web-log'));
   server.use(require('web-auto-headers'));
@@ -36,18 +40,16 @@ function serve() {
       res.code = 200;
       res.headers.set("Content-Type", "application/json");
       res.body = JSON.stringify(result, null, 2) + "\n";
-      p(res);
     });
   });
 
   server.use(function (req, res, next) {
-    return render(req.path).then(function (response) {
-      p("RESPONSE", response)
+    return render(vfs, req.pathname).then(function (response) {
       if (!response) return next();
       var defaultCode = 404;
       if (response.mime) res.headers.set("Content-Type", response.mime);
       if (response.redirect) {
-        defaultCode = 302;
+        defaultCode = 301;
         res.headers.set("Location", response.redirect);
       }
       res.code = response.code || defaultCode;
@@ -57,6 +59,7 @@ function serve() {
 
   server.start();
 }
+
 
 // Pull updates from github and store data in redis.
 function pull() {
@@ -92,55 +95,43 @@ function pull() {
   });
 }
 
-function render(path) {
-  return redisStorage().then(function (storage) {
-    var load = storage.load;
-    var parts = path.split('/').filter(Boolean);
-    var index = 0, last = parts.length;
-    return load(rootHash).then(onObject);
-
-    function onObject(obj) {
-      if (obj.type === "commit") {
-        var commit = decodeCommit(obj.data);
-        return load(commit.tree).then(onObject);
-      }
-      if (index === last) {
-        return renderObj(obj);
-      }
-      var part = parts[index++];
-      if (obj.type === "tree") {
-        var tree = decodeTree(obj.data);
-        var entry = tree[part];
-        if (!entry) return { body: "No such file: " + path };
-        return load(entry.hash).then(onObject);
-      }
-      if (!entry) return { body: "No such file: " + path };
+function render(vfs, path) {
+  return vfs.stat(path).then(function (meta) {
+    if (!meta) return;
+    if (meta.type === "file" || meta.type === "blob") {
+      return renderFile(vfs, path);
     }
-
-    function renderObj(obj) {
-      if (obj.type === "tree") {
-        if (path[path.length - 1] !== "/") {
-          return { redirect: path + "/" };
-        }
-        var tree = decodeTree(obj.data);
-        var index = tree['index.html'];
-        if (index) {
-          path += "index.html";
-          return load(index.hash).then(renderObj);
-        }
-        return {
-          code: 200,
-          mime: "application/json",
-          body: JSON.stringify(tree, null, 2)
-        };
-      }
-      var body = obj.data;
-      return {
-        code: 200,
-        mime: guess(path, body),
-        body: body,
-      };
+    if (meta.type === "tree" || meta.type === "directory") {
+      return renderFolder(vfs, path);
     }
+  });
+}
+
+function renderFile(vfs, path) {
+  return vfs.readFile(path).then(function (body) {
+    if (body == null) return;
+    return {
+      code: 200,
+      mime: guess(path, body),
+      body: body,
+    };
+  });
+}
+
+function renderFolder(vfs, path) {
+  if (path[path.length - 1] !== "/") {
+    return { redirect: path + "/" };
+  }
+  return vfs.readTree(path).then(function (tree) {
+    if (!tree) return;
+    if (tree["index.html"]) {
+      return renderFile(vfs, path + "index.html");
+    }
+    return {
+      code: 200,
+      mime: "application/json",
+      body: JSON.stringify(tree, null, 2) + "\n"
+    };
   });
 }
 

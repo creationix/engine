@@ -4,7 +4,7 @@
   // Implement setImmediate needed by promiscuous.
   nucleus.dofile("builtins/setimmediate.js");
   // Implement Promise
-  nucleus.dofile("builtins/promiscuous.js");
+  nucleus.dofile("builtins/promise.js");
 
   var mods = {
     uv: nucleus.uv,
