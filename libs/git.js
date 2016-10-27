@@ -14,6 +14,7 @@ var parseOct = bintools.parseOct;
 var binToHex = bintools.binToHex;
 var binToRaw = bintools.binToRaw;
 
+
 return {
   fetch: fetch,
   frame: frame,
@@ -48,6 +49,7 @@ function deframe(framed) {
 function fetch(options) {
   var host = options.host || "127.0.0.1";
   var hostName = options.hostName || host;
+  var port = options.port || 9418;
   var path = options.path;
   var ref = options.ref || "HEAD";
   var load = options.load;
@@ -58,7 +60,7 @@ function fetch(options) {
 
   return connect({
     host: host,
-    port: 9418,
+    port: port,
     encode: pktLine.encode,
     decode: pktLine.decode,
   }).then(function (client) {

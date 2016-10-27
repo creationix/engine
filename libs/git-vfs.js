@@ -2,22 +2,61 @@ var redisStorage = require('redis-storage');
 var git = require('git');
 var decodeCommit = git.decodeCommit;
 var decodeTree = git.decodeTree;
+var fetch = git.fetch;
 
 // Implementation of engine api on top of a git tree (used by git publishing)
 
 // api.readFile(path: string): Promise<Buffer|undefined>
 // api.stat(path: string): Promise<{entry|undefined>
 
-return function makeVfs(rootHash) {
-  // Cache of hash to pre-parsed git objects;
-  // Currently only stores trees
-  var cache = {};
+return function makeVfs(options) {
 
-  return {
-    stat: stat,
-    readFile: readFile,
-    readTree: readTree,
-  };
+  var url = "git://" + options.hostName + options.path;
+  if (options.ref !== "HEAD") url += "#" + options.ref;
+
+  var rootHash, cache;
+
+  return update().then(function () {
+    return {
+      update: update,
+      stat: stat,
+      readFile: readFile,
+      readTree: readTree,
+    }
+  });
+
+  function update() {
+    p("Fetching updates for " + url);
+    return redisStorage().then(function (storage) {
+      return storage.call("get", url).then(function (root) {
+        root = root && root.toString();
+        return fetch({
+          host: options.host,
+          hostName: options.hostName,
+          ref: options.ref,
+          path: options.path,
+          have: root,
+          load: storage.load,
+          save: storage.save,
+        }).then(function (result) {
+          cache = {};
+          rootHash = result.root;
+          if (result.root === root) {
+            print("No updates");
+            return result;
+          }
+          print("Updated to " + result.root);
+          return storage.call("set", url, result.root).then(function () {
+            return result;
+          });
+        });
+      }).then(function (result) {
+        return storage.free().then(function () {
+          return result;
+        });
+      });
+    });
+  }
 
   // Load and decode a git object.  Trees, commits, and small blobs are cached.
   function load(hash) {
