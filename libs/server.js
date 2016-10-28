@@ -1,6 +1,9 @@
 "use strict";
 var Server = require('web').Server;
 var guess = require('mime');
+var indexOf = require('bintools').indexOf;
+var binToStr = require('bintools').binToStr;
+var slice = require('bintools').slice;
 
 var indexes = [
   "index.html",
@@ -55,10 +58,7 @@ function render(vfs, path) {
   return vfs.stat(path).then(function (meta) {
     if (!meta) return;
     if (meta.type === "file" || meta.type === "blob") {
-      if ((meta.mode & 1) && /\.js$/i.test(path)) {
-        return renderScript(vfs, path);
-      }
-      return renderFile(vfs, path);
+      return renderFile(vfs, path, meta);
     }
     if (meta.type === "tree" || meta.type === "directory") {
       return renderFolder(vfs, path);
@@ -66,9 +66,22 @@ function render(vfs, path) {
   });
 }
 
-function renderFile(vfs, path) {
+function renderFile(vfs, path, meta) {
   return vfs.readFile(path).then(function (body) {
     if (body == null) return;
+    if (meta.mode & 1) {
+      var index = indexOf(body, ";\n\n");
+      if (index >= 0) {
+        var config = binToStr(body, 0, index);
+        var match = config.match(/^([_a-z0-9]+)\(([\s\S]*)\)$/);
+        if (match) {
+          var name = match[1];
+          var args = eval("[" + match[2] + "]");
+          args.push(slice(body, index + 3));
+          return renderScript(vfs, path, name, args);
+        }
+      }
+    }
     return {
       code: 200,
       mime: guess(path, body),
@@ -77,14 +90,14 @@ function renderFile(vfs, path) {
   });
 }
 
-function renderScript(vfs, path) {
-  return vfs.readFile(path).then(function (code) {
-    code = "function(load){" + code + "}";
-    return nucleus.compileFunction(code, "web:" + path)(load);
+function renderScript(vfs, path, name, args) {
+  var interpreterPath = "interpreters/" + name + ".js";
+  return vfs.readFile(interpreterPath).then(function (code) {
+    if (!code) throw new Error("No such interpreter: " + interpreterPath);
+    code = "" + code;
+    var interpreter = nucleus.compileFunction(""+code, interpreterPath);
+    return interpreter.apply(null, args);
   });
-  function load(subPath) {
-    return vfs.readFile(nucleus.pathjoin(path, "..", subPath));
-  }
 }
 
 function renderFolder(vfs, path) {
