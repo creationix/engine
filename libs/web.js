@@ -192,7 +192,7 @@ Server.prototype.onConnection = function onConnection(err, client) {
   function runLayer(index) {
     var layer = layers[index];
     return Promise.resolve(layer && layer(req, res, function () {
-      return runLayer(index + 1);
+        return runLayer(index + 1);
     })).catch(function (err) {
       p(err);
       res.code = 500;

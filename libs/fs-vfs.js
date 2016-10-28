@@ -27,7 +27,6 @@ return function makeVfs(rootPath) {
   }
 
   function readFile(path) {
-    p("readFile", path);
     return new Promise(function (resolve, reject) {
       path = pathJoin(rootPath, pathJoin(".", path));
       uv.fs_open(path, "r", 420, function (err, fd) {
@@ -37,10 +36,9 @@ return function makeVfs(rootPath) {
         }
         return uv.fs_fstat(fd, function (err, stat) {
           if (err) return onRead(err);
-          return uv.fs_read(fd, 0, stat.size, onRead);
+          return uv.fs_read(fd, stat.size, 0, onRead);
         })
         function onRead(err, data) {
-          p("onRead", err, data);
           return uv.fs_close(fd, function () {
             if (err) return reject(err);
             return resolve(data);
@@ -51,7 +49,6 @@ return function makeVfs(rootPath) {
   }
 
   function readTree(path) {
-    p("readTree", path);
     return new Promise(function (resolve, reject) {
       path = pathJoin(rootPath, pathJoin(".", path));
       return uv.fs_scandir(path, function (err, entries) {
