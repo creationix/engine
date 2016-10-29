@@ -4,7 +4,7 @@ var uv = nucleus.uv;
 
 global.p = prettyPrint;
 
-var colorize, width, strip;
+var colorize, width, strip, stdout;
 if (uv.guess_handle(1) === "TTY") {
   colorize = function colorize(color_name, string, reset_name) {
     return color(color_name) + string + color(reset_name);
@@ -12,14 +12,9 @@ if (uv.guess_handle(1) === "TTY") {
   strip = function strip(string) {
     return string.replace(/\u001b\[[^m]*m/g, '');
   }
-  var Tty = uv.Tty;
-  var stdout = new Tty(1, false);
+  stdout = new uv.Tty(1, false);
   var size = stdout.getWinsize();
   width = size[0];
-  global.print = function () {
-   var line = [].join.call(arguments, " ") + "\r\n";
-   stdout.write(line);
-  }
 }
 else {
   colorize = function (_, string) {
@@ -29,6 +24,13 @@ else {
     return string;
   }
   width = 80;
+  stdout = new uv.Pipe(false);
+  stdout.open(1);
+}
+
+global.print = function () {
+ var line = [].join.call(arguments, " ") + "\r\n";
+ stdout.write(line);
 }
 
 function color(color_name) {
