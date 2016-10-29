@@ -6,7 +6,6 @@ nucleus.dofile("builtins/index.js");
 var pathjoin = nucleus.pathjoin;
 var uv = nucleus.uv;
 
-
 // Manually include some dns entries till seaduk adds dns bindings.
 var dns = {
   "github.com": "192.30.253.112",
@@ -14,7 +13,9 @@ var dns = {
 };
 
 if (nucleus.args[0]) {
-  initialize(nucleus.args[0]).then(require('server')).catch(p);
+  Promise.resolve(initialize(nucleus.args[0]))
+    .then(require('server'))
+    .catch(p);
 }
 else {
   var cmd = nucleus.cmd;
@@ -25,9 +26,9 @@ else {
 }
 
 function initialize(url) {
-  print("Initializing " + url + "...");
   var match = url.match(/^git:\/\/([^:\/]+)(?::([0-9]+))?([^#]*)(?:#(.+))?$/);
   if (match) {
+    print("Initializing git repo " + url + "...");
     return require('git-vfs')({
       hostName: match[1],
       host: dns[match[1]] || match[1],
@@ -36,9 +37,9 @@ function initialize(url) {
       ref: match[4] || "HEAD"
     });
   }
-  return Promise.resolve(require('fs-vfs')(pathjoin(
-    uv.cwd(), url)
-  ));
+  var path = pathjoin(uv.cwd(), url);
+  print("Initializing folder " + path + "...");
+  return require('fs-vfs')(path);
 }
 
 // Start the event loop.

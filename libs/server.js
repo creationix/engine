@@ -14,12 +14,14 @@ var indexes = [
 return function serve(vfs) {
   var port = nucleus.getenv("PORT");
   port = port ? parseInt(port) : 8080;
+  var host = nucleus.getenv("HOST") || "127.0.0.1";
 
   var server = new Server();
   server.use(require('web-log'));
   server.use(require('web-auto-headers'));
 
   server.bind({
+    host: host,
     port: port
   });
 
